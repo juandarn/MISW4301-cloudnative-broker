@@ -79,25 +79,6 @@ This initial version focuses on the backend services, cloud deployment, and inte
 
 ---
 
-## 🏗️ System Architecture (Overview)
-
-The system follows a **microservices-based architecture**, where each service is deployed independently:
-
-```
-
-cloudnative-broker/
-│
-├── user-service/          # Manages user profiles and roles
-├── trip-service/          # Manages trips and routes (trayectos)
-├── offer-service/         # Handles package offers and calculations
-├── gateway-service/       # API Gateway for routing
-├── notification-service/  # Event-driven notifications (Entrega 3)
-├── scripts/               # Deployment and orchestration files
-└── ci/                    # CI/CD configuration (GitHub Actions, Jenkins)
-
-```
-
----
 
 ## 🧪 Testing and CI/CD
 
@@ -112,9 +93,9 @@ Each microservice includes:
 
 ## 🌩️ Cloud Deployment
 
-The final system will be deployed using a **cloud provider** (AWS, GCP, or Azure) and will include:
+The final system will be deployed using a **cloud provider** (AWS) and will include:
 - Container orchestration (Kubernetes or GKE).  
-- Serverless event triggers (Cloud Functions / Lambda).  
+- Serverless event triggers (Cloud Functions).  
 - Cloud-hosted databases and messaging services.  
 
 ---
@@ -136,10 +117,4 @@ The final system will be deployed using a **cloud provider** (AWS, GCP, or Azure
 **Institution:** Universidad de los Andes  
 **Year:** 2025  
 
----
 
-## 📄 License
-
-Academic use only — Project developed as part of the MISW-4301 course.  
-All rights reserved to the authors and Universidad de los Andes.
-```
