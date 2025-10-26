@@ -1,0 +1,33 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam ArrowColor #333
+skinparam ActorStyle awesome
+
+actor Usuario as U
+participant "Aggregator" as A
+participant "Users Service" as US
+participant "Routes Service" as RS
+participant "Posts Service" as PS
+
+== Crear Publicación RF003 ==
+U -> A: POST /rf003/posts\n(token, payload)
+A -> A: ping user, post, offers, routes, scores
+A -> US: GET /users (token)
+US --> A: Usuario válido
+A -> RS: GET /routes?flight=flightId
+RS --> A: [Lista vacía]
+A -> RS: POST /routes (datos trayecto)
+RS --> A: Ruta creada (id)
+A -> PS: POST /posts (expireAt, routeId, userId)
+PS --> A: Publicación creada (id)
+A --> U: 201 {data:{id, userId, expireAt, route:{id}}}
+
+== Reglas Validación ==
+note over A
+- plannedStartDate > now
+- plannedEndDate > plannedStartDate
+- expireAt > now AND expireAt <= plannedStartDate
+- Unicidad: usuario + ruta (fecha) sin duplicado
+end note
+@enduml

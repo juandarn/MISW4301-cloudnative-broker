@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: truenative
+  labels:
+    app: truenative
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: truenative
+  template:
+    metadata:
+      labels:
+        app: truenative
+    spec:
+      containers:
+        - name: truenative
+          image: ghcr.io/misw-4301-desarrollo-apps-en-la-nube/true-native:2.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: SECRET_TOKEN
+              value: "supersecreto123" 
+            - name: PUBLIC_BASE_URL
+              value: "http://users-app-service"   
+          readinessProbe:
+            httpGet:
+              path: /native/ping
+              port: 3000
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /native/ping
+              port: 3000
+            initialDelaySeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-truenative
+spec:
+  type: ClusterIP
+  selector:
+    app: truenative
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000

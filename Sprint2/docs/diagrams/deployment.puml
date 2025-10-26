@@ -1,0 +1,217 @@
+@startuml deployment
+'==================== ESTILO GLOBAL ====================
+!theme plain
+top to bottom direction
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam linetype ortho
+skinparam ArrowThickness 1
+skinparam ArrowColor #555
+skinparam defaultTextAlignment center
+skinparam BackgroundColor #FFFFFF
+
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor #888
+}
+skinparam component {
+  BackgroundColor white
+  BorderColor #444
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor #444
+}
+skinparam frame {
+  BackgroundColor #F7FBFF
+  BorderColor #2B6CB0
+  FontColor #2B6CB0
+}
+
+<style>
+  .Database {
+    BackgroundColor lightblue
+    BorderColor #2B6CB0
+    FontColor black
+  }
+  .Ingress {
+    BackgroundColor #FFFFFF
+    BorderColor #2B6CB0
+    FontColor #2B6CB0
+  }
+  .Service {
+    BackgroundColor #FFFFFF
+    BorderColor #666
+  }
+</style>
+
+'==================== LEYENDA ====================
+legend left
+<b>Convenciones</b>
+<color:#444>━►</color>  Comunicación interna
+<color:#999>⋯⋯►</color>  Comunicación externa
+endlegend
+
+legend right
+|= Elemento |= Rol |
+| ingress | Punto de entrada (Ingress Controller) |
+| svc_* | Service (ClusterIP) expositor del pod |
+| *_app | Contenedor de aplicación Flask |
+| *_db  | Base PostgreSQL dedicada |
+| *_volumen | Volumen persistente |
+endlegend
+
+'==================== ENTORNO ====================
+frame "K8s cluster" as k8s #aliceblue {
+
+  '---------- INGRESS (ENTRYPOINT ÚNICO) ----------
+  component "ingress" as ingress <<Ingress>>
+
+  '===== COLUMNAS LÓGICAS =====
+  package "Apps" as col_apps {
+    component "users-app-service"  as svc_users  <<Service>>
+    frame "users-app"  as pod_users  {
+       component "users_app" as users_app
+    }
+    ' --- separador visual ---
+
+    component "posts-app-service"  as svc_posts  <<Service>>
+    frame "posts-app"  as pod_posts  { 
+      component "posts_app"   as posts_app
+    }
+
+    ' --- separador visual ---
+
+    component "offers-app-service" as svc_offers <<Service>>
+    frame "offers-app" as pod_offers { 
+      component "offers_app"  as offers_app
+    }
+
+    ' --- separador visual ---
+
+    component "routes-app-service" as svc_routes <<Service>>
+    frame "routes-app" as pod_routes { 
+      component "routes_app"  as routes_app
+    }
+
+    ' --- separador visual ---
+
+    component "scores-app-service" as svc_scores <<Service>>
+    frame "scores-app" as pod_scores { 
+      component "scores_app"  as scores_app
+    }
+
+    '--- Aggregator (frente a los demás) ---
+    component "aggregator-app-service" as svc_agg <<Service>>
+    frame "aggregator-app" as pod_agg {
+      component "aggregator_service" as aggregator
+    }
+  }
+
+  package "DBs" as col_dbs {
+    component "users-db-service"  as svc_users_db  <<Service>>
+    frame "users-db"  as pod_users_db  { 
+      database "users_db"  as users_db  <<Database>> 
+    }
+
+    component "posts-db-service"  as svc_posts_db  <<Service>>
+    frame "posts-db"  as pod_posts_db  { 
+      database "posts_db"  as posts_db  <<Database>> 
+    }
+
+    component "offers-db-service" as svc_offers_db <<Service>>
+    frame "offers-db" as pod_offers_db { 
+      database "offers_db" as offers_db <<Database>> 
+    }
+
+    component "routes-db-service" as svc_routes_db <<Service>>
+    frame "routes-db" as pod_routes_db  { 
+      database "routes_db" as routes_db <<Database>> 
+    }
+
+    component "scores-db-service" as svc_scores_db <<Service>>
+    frame "scores-db" as pod_scores_db  { 
+      database "scores_db" as scores_db <<Database>> 
+    }
+  }
+
+  package "Storage" as col_storage {
+    artifact "users-db-volumen"  as vol_users_db
+    artifact "posts-db-volumen"  as vol_posts_db
+    artifact "offers-db-volumen" as vol_offers_db
+    artifact "routes-db-volumen" as vol_routes_db
+    artifact "scores-db-volumen" as vol_scores_db
+  }
+
+  '===== CONEXIONES APPS =====
+  svc_users  --> pod_users
+  svc_posts  --> pod_posts
+  svc_offers --> pod_offers
+  svc_routes --> pod_routes
+  svc_scores --> pod_scores
+
+  '===== CONEXIONES DBs =====
+  users_app  --> svc_users_db
+  svc_users_db  --> pod_users_db
+  users_db   --> vol_users_db
+
+  posts_app  --> svc_posts_db
+  svc_posts_db  --> pod_posts_db
+  posts_db   --> vol_posts_db
+
+  offers_app --> svc_offers_db
+  svc_offers_db --> pod_offers_db
+  offers_db  --> vol_offers_db
+
+  routes_app --> svc_routes_db
+  svc_routes_db --> pod_routes_db
+  routes_db  --> vol_routes_db
+
+  scores_app --> svc_scores_db
+  svc_scores_db --> pod_scores_db
+  scores_db  --> vol_scores_db
+
+  '===== AGGREGATOR =====
+  svc_agg --> pod_agg : REST
+  aggregator --> svc_users  : REST
+  aggregator --> svc_posts  : REST
+  aggregator --> svc_offers : REST
+  aggregator --> svc_routes : REST
+  aggregator --> svc_scores : REST
+
+  '===== ALINEACIÓN (enlaces ocultos para columnas ordenadas) =====
+  svc_users -[hidden]-> svc_posts
+  svc_posts -[hidden]-> svc_offers
+  svc_offers -[hidden]-> svc_routes
+  svc_routes -[hidden]-> svc_scores
+  svc_users_db -[hidden]-> svc_posts_db
+  svc_posts_db -[hidden]-> svc_offers_db
+  svc_offers_db -[hidden]-> svc_routes_db
+  svc_routes_db -[hidden]-> svc_scores_db
+  vol_users_db -[hidden]-> vol_posts_db
+  vol_posts_db -[hidden]-> vol_offers_db
+  vol_offers_db -[hidden]-> vol_routes_db
+  vol_routes_db -[hidden]-> vol_scores_db
+
+  svc_users -[hidden]down-> svc_users_db
+  svc_users_db -[hidden]down-> vol_users_db
+  svc_posts -[hidden]down-> svc_posts_db
+  svc_posts_db -[hidden]down-> vol_posts_db
+  svc_offers -[hidden]down-> svc_offers_db
+  svc_offers_db -[hidden]down-> vol_offers_db
+  svc_routes -[hidden]down-> svc_routes_db
+  svc_routes_db -[hidden]down-> vol_routes_db
+  svc_scores -[hidden]down-> svc_scores_db
+  svc_scores_db -[hidden]down-> vol_scores_db
+}
+
+'==================== CLIENTE ====================
+actor "User" as user
+user ..> ingress : HTTP
+ingress ..> svc_agg    : /rf003|/rf004|/rf005
+ingress ..> svc_users  : /users
+ingress ..> svc_posts  : /posts
+ingress ..> svc_offers : /offers
+ingress ..> svc_routes : /routes
+ingress ..> svc_scores : /score
+@enduml

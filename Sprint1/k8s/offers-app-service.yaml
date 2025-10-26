@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: offers-app-deployment
+  labels:
+    app: offers-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: offers-app
+  template:
+    metadata:
+      labels:
+        app: offers-app
+    spec:
+      containers:
+      - name: offers-app
+        image: offers-app:v1.0.0
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@offers-db-service:5432/offers_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: offers-app-service
+  namespace: default
+spec:
+  selector:
+    app: offers-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30003
+  type: NodePort

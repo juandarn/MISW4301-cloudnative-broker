@@ -1,0 +1,68 @@
+################
+# CREDIT CARDS APP
+################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-cards-app
+  namespace: default
+  labels:
+    app: credit-cards-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credit-cards-app
+  template:
+    metadata:
+      labels:
+        app: credit-cards-app
+    spec:
+      containers:
+      - name: credit-cards-app
+        image: 533267140008.dkr.ecr.us-east-1.amazonaws.com/credit-cards-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@credit-cards-db-service:5432/credit_cards_db"  # <-- unificado
+        - name: SECRET_TOKEN
+          value: "supersecreto123"
+        - name: TRUENATIVE_BASE_URL
+          value: "http://service-truenative"
+        - name: MAX_REFRESH_SECONDS
+          value: "12"     # cuánto tiempo como máximo puede “poller” un GET
+        - name: MIN_REFRESH_AGE_SECONDS
+          value: "3"      # gracia mínima para NO refrescar el PRIMER GET tras el POST
+        - name: GMAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: gmail-secret
+              key: user
+        - name: GMAIL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gmail-secret
+              key: password
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credit-cards-app-service
+  namespace: default
+spec:
+  selector:
+    app: credit-cards-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: ClusterIP

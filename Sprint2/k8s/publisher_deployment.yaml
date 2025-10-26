@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: publisher-deployment
+  labels:
+    app: publisher-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: publisher-app
+  template:
+    metadata:
+      labels:
+        app: publisher-app
+    spec:
+      containers:
+        - name: publisher-app
+          image: 992382531881.dkr.ecr.us-east-1.amazonaws.com/publisher-app:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "125m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80
+          env:
+            - name: SNS_TOPIC_ARN
+              value: "arn:aws:sns:us-east-1:992382531881:publisher-subscriber-topic"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: publisher-service
+spec:
+  type: ClusterIP
+  selector:
+    app: publisher-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

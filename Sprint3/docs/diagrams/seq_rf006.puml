@@ -1,0 +1,121 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam ArrowColor #333
+skinparam ActorStyle awesome
+
+actor Usuario as U
+participant "Ingress" as ING
+participant "Credit Cards API" as CC
+participant "Users Service" as US
+participant "Card Verification Service" as CVS
+participant "TrueNative" as TN
+participant "Credit Cards DB" as CCDB
+participant "Card Poller Service" as PS
+participant "Email Service" as ES
+
+== Registro de Tarjeta ==
+U -> ING: POST /credit-cards
+note right: Authorization: Bearer token\n{\n  "cardNumber": "1234567890123456",\n  "cvv": "123",\n  "expirationDate": "25/12",\n  "cardHolderName": "Juan Perez"\n}
+
+ING -> CC: POST /credit-cards
+CC -> US: GET /users/verify-token
+note right: Validación de token
+
+alt Token válido y usuario verificado
+    US --> CC: 200 OK {userId, verified: true}
+    
+    CC -> CC: Validar datos tarjeta
+    CC -> CC: Verificar tarjeta no duplicada
+    CC -> CC: Verificar tarjeta no vencida
+    
+    alt Validaciones exitosas
+        CC -> CCDB: Crear tarjeta (estado: POR_VERIFICAR)
+        CCDB --> CC: ID tarjeta creada
+        
+        CC -> CVS: Solicitar verificación
+        CVS -> TN: POST /native/cards
+        note right: Authorization: Bearer SECRET_TOKEN\n{\n  "card": {...},\n  "transactionIdentifier": "uuid"\n}
+        
+        alt TrueNative responde correctamente
+            TN --> CVS: 201 {RUV, token, issuer, transactionIdentifier}
+            CVS -> CCDB: Actualizar RUV y token
+            CVS --> CC: Verificación iniciada
+            CC --> ING: 201 {id, userId, createdAt}
+            
+        else Error en TrueNative (400/401/403/409)
+            TN --> CVS: Error (4xx)
+            CVS -> CCDB: Eliminar tarjeta
+            CVS --> CC: Error verificación
+            CC --> ING: 400 Error en verificación
+        end
+        
+    else Validaciones fallidas
+        CreditCardAPI --> Ingress: 400/409/412 Error validación
+    end
+    
+else Token inválido o usuario no verificado
+    US --> CC: 401 Token inválido
+    CC --> ING: 401 Unauthorized
+end
+
+ING --> U: Respuesta
+
+== Proceso de Verificación Asíncrona ==
+
+== Opción A: Polling Directo ==
+loop Polling cada 30 segundos
+    PS -> CCDB: SELECT tarjetas POR_VERIFICAR
+    CCDB --> PS: Lista de tarjetas pendientes
+    
+    loop Para cada tarjeta pendiente
+        PS -> TN: GET /native/cards/{ruv}
+        note right: Authorization: Bearer SECRET_TOKEN
+        
+        alt Verificación completada
+            TN --> PS: 200 {status: "APROBADA"|"RECHAZADA"}
+            PS -> CCDB: UPDATE status = APROBADA/RECHAZADA, updatedAt = now()
+            
+            PS -> ES: Enviar notificación
+            note right: {\n  "to": "user@email.com",\n  "subject": "Estado de verificación de tarjeta",\n  "template": "card_verification",\n  "data": {status, lastFourDigits, ruv}\n}
+            ES -> ES: Generar email HTML
+            ES -> "SMTP Server": Enviar email
+            
+        else Verificación en proceso
+            TN --> PS: 202 Accepted (en proceso)
+            
+        else Error en consulta
+            TN --> PS: 404/401/403 Error
+            PS -> PS: Log error, continuar con siguiente
+        end
+    end
+end
+
+== Opción B: Cola de Mensajes ==
+note over PS: También puede usar cola SQS/local
+PS -> "Message Queue": Enviar mensaje verificación
+"Message Queue" -> "Queue Consumer": Procesar mensaje
+"Queue Consumer" -> TN: GET /native/cards/{ruv}
+TN --> "Queue Consumer": Estado verificación
+"Queue Consumer" -> CCDB: UPDATE status
+"Queue Consumer" -> ES: Enviar notificación
+
+== Consulta de Tarjetas ==
+U -> ING: GET /credit-cards
+ING -> CC: GET /credit-cards
+CC -> US: GET /users/verify-token
+
+alt Token válido
+    US --> CC: 200 OK {userId}
+    CC -> CCDB: SELECT * FROM credit_cards WHERE user_id = ?
+    CCDB --> CC: Lista de tarjetas
+    CC --> ING: 200 [{id, token, userId, lastFourDigits, issuer, status, createdAt, updatedAt}]
+    
+else Token inválido
+    US --> CC: 401 Unauthorized
+    CC --> ING: 401 Unauthorized
+end
+
+ING --> U: Respuesta
+
+@enduml

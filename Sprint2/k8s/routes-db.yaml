@@ -1,0 +1,52 @@
+###########
+# DATABASE
+############
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: routes-db-deployment
+  labels:
+    app: routes-db
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: routes-db
+  template:
+    metadata:
+      labels:
+        app: routes-db
+    spec:
+      containers:
+      - name: routes-db
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "routes_db"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        volumeMounts:
+        - name: routes-db-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: routes-db-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: routes-db-service
+  namespace: default
+spec:
+  selector:
+    app: routes-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

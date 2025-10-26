@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "mutiplication"
+version = "0.1.0"
+description = "Multiplication app"
+authors = [
+  "César Forero <ca.forero10@uniandes.edu.co>"
+]
+license = "MIT"
+package-mode = false
+packages = [{include = "*", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = "~3.11"
+fastapi = "~0.115.12"
+uvicorn = "~0.27.1"
+pydantic = "~2.6.1"
+pydantic-settings = "~2.1.0"
+requests = "~2.32.4"

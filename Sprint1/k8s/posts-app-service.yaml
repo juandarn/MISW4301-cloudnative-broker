@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: posts-app-service
+  namespace: default
+spec:
+  selector:
+    app: posts-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30001
+  type: NodePort
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: posts-app-deployment
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: posts-app
+  template:
+    metadata:
+      labels:
+        app: posts-app
+    spec:
+      containers:
+      - name: posts-app
+        image: posts-app:v1.0.0
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@posts-db-service:5432/posts_db"

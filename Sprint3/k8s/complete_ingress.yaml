@@ -1,0 +1,89 @@
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gateway-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /producer
+            pathType: Prefix
+            backend:
+              service:
+                name: producer-service
+                port:
+                  number: 80
+          - path: /publisher
+            pathType: Prefix
+            backend:
+              service:
+                name: publisher-service
+                port:
+                  number: 80
+          - path: /users
+            pathType: Prefix
+            backend:
+              service:
+                name: users-app-service
+                port:
+                  number: 80
+          - path: /posts
+            pathType: Prefix
+            backend:
+              service:
+                name: posts-app-service
+                port:
+                  number: 80
+          - path: /offers
+            pathType: Prefix
+            backend:
+              service:
+                name: offers-app-service
+                port:
+                  number: 80
+          - path: /routes
+            pathType: Prefix
+            backend:
+              service:
+                name: routes-app-service
+                port:
+                  number: 80
+          - path: /score
+            pathType: Prefix
+            backend:
+              service:
+                name: scores-app-service
+                port:
+                  number: 80
+          - path: /rf005
+            pathType: Prefix
+            backend:
+              service:
+                name: aggregator-app-service
+                port:
+                  number: 80
+          - path: /native
+            pathType: Prefix
+            backend:
+              service:
+                name: service-truenative
+                port:
+                  number: 80
+          - path: /credit-cards
+            pathType: Prefix
+            backend:
+              service:
+                name: credit-cards-app-service
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aggregator-app-service
+                port:
+                  number: 80

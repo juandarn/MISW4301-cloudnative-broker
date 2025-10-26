@@ -1,0 +1,140 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam ArrowColor #333
+skinparam ActorStyle awesome
+
+actor Usuario as U
+participant "Ingress" as ING
+participant "Users API" as UA
+participant "Identity Verification Service" as IVS
+participant "TrueNative" as TN
+participant "Users DB" as UDB
+participant "User Verification Handler" as VH
+participant "Email Service" as ES
+
+== Registro de Usuario ==
+U -> ING: POST /users
+note right: {\n  "username": "juan123",\n  "email": "juan@email.com",\n  "password": "password",\n  "phoneNumber": "+571234567",\n  "dni": "12345678",\n  "fullName": "Juan Perez"\n}
+
+ING -> UA: POST /users
+UA -> UA: Validar datos de entrada
+UA -> UA: Verificar usuario único (username, email)
+
+alt Validaciones exitosas
+    UA -> UDB: Crear usuario (status: POR_VERIFICAR)
+    UDB --> UA: Usuario creado {id}
+    
+    UA -> IVS: Solicitar verificación identidad
+    note right: {\n  "userId": "uuid",\n  "email": "juan@email.com",\n  "dni": "12345678",\n  "fullName": "Juan Perez",\n  "phone": "+571234567"\n}
+    
+    IVS -> TN: POST /native/verify
+    note right: Authorization: Bearer SECRET_TOKEN\n{\n  "user": {\n    "email": "juan@email.com",\n    "dni": "12345678",\n    "fullName": "Juan Perez",\n    "phone": "+571234567"\n  },\n  "transactionIdentifier": "uuid",\n  "userIdentifier": "user_uuid",\n  "userWebhook": "https://host/users/{user_id}"\n}
+    
+    alt TrueNative acepta verificación
+        TN --> IVS: 201 {RUV, userIdentifier, transactionIdentifier, task_status: "ACCEPTED"}
+        IVS -> UDB: UPDATE usuario SET ruv = ?
+        IVS --> UA: Verificación iniciada {RUV}
+        UA --> ING: 201 {id, username, email, status: "POR_VERIFICAR", createdAt}
+        
+    else Error en TrueNative
+        TN --> IVS: Error (400/401/403/409)
+        IVS -> UDB: UPDATE usuario SET status = "NO_VERIFICADO"
+        IVS --> UA: Error en verificación
+        UA --> ING: 201 {id, username, email, status: "NO_VERIFICADO", createdAt}
+        
+        UA -> ES: Notificar error verificación
+        ES -> "SMTP Server": Enviar email error
+    end
+    
+else Validaciones fallidas
+    UA --> ING: 400 Error validación (usuario duplicado, datos inválidos)
+end
+
+ING --> U: Respuesta
+
+== Proceso de Verificación Asíncrona (Webhook) ==
+note over TN: TrueNative procesa verificación\n(hasta 120 segundos)
+
+TN -> ING: PATCH /users/{user_id}
+note right: {\n  "RUV": "ruv123",\n  "userIdentifier": "user_uuid",\n  "createdAt": "2025-01-01T00:00:00Z",\n  "status": "VERIFICADO"|"NO_VERIFICADO",\n  "score": 75,\n  "verifyToken": "sha256_hash"\n}
+
+ING -> VH: PATCH /users/{user_id}
+VH -> VH: Validar verifyToken
+note right: Generar SHA256(SECRET_TOKEN:RUV:SCORE)\ny comparar con verifyToken recibido
+
+alt Token válido
+    VH -> UDB: SELECT user WHERE ruv = ?
+    
+    alt Usuario encontrado
+        UDB --> VH: Usuario data
+        
+        alt Score >= 60
+            VH -> UDB: UPDATE status = "VERIFICADO", updatedAt = now()
+            VH -> ES: Notificar verificación exitosa
+            note right: {\n  "to": "juan@email.com",\n  "subject": "Verificación de identidad exitosa",\n  "template": "identity_verified",\n  "data": {status: "VERIFICADO", ruv, userData}\n}
+            
+        else Score < 60
+            VH -> UDB: UPDATE status = "NO_VERIFICADO", updatedAt = now()
+            VH -> ES: Notificar verificación fallida
+            note right: {\n  "to": "juan@email.com",\n  "subject": "Verificación de identidad fallida",\n  "template": "identity_not_verified",\n  "data": {status: "NO_VERIFICADO", ruv, userData}\n}
+        end
+        
+        ES -> ES: Generar email HTML
+        ES -> "SMTP Server": Enviar email
+        VH --> ING: 200 OK
+        
+    else Usuario no encontrado
+        VH --> ING: 404 Usuario no encontrado
+    end
+    
+else Token inválido
+    VH --> ING: 401 Token inválido
+end
+
+ING --> TN: 200 OK
+
+== Autenticación de Usuario ==
+U -> ING: POST /users/auth
+note right: {\n  "username": "juan123",\n  "password": "password"\n}
+
+ING -> UA: POST /users/auth
+UA -> UDB: SELECT user WHERE username = ? AND password_hash = ?
+
+alt Credenciales correctas
+    UDB --> UA: Usuario encontrado
+    
+    alt Usuario verificado (status = "VERIFICADO")
+        UA -> UA: Generar token JWT
+        UA -> UDB: UPDATE token, expireAt
+        UA --> ING: 200 {id, token, expireAt}
+        
+    else Usuario no verificado (status != "VERIFICADO")
+        UA --> ING: 403 {msg: "Usuario no verificado"}
+    end
+    
+else Credenciales incorrectas
+    UA --> ING: 401 Credenciales inválidas
+end
+
+ING --> U: Respuesta
+
+== Endpoints Protegidos ==
+U -> ING: GET /posts (con Authorization header)
+ING -> UA: GET /users/verify-token
+
+UA -> UDB: SELECT user WHERE token = ? AND expireAt > now()
+
+alt Token válido y usuario verificado
+    UDB --> UA: Usuario verificado
+    UA --> ING: 200 {userId, verified: true}
+    ING -> "Posts Service": GET /posts
+    "Posts Service" --> ING: Datos posts
+    ING --> U: 200 Posts data
+    
+else Token inválido o usuario no verificado
+    UA --> ING: 401 Unauthorized
+    ING --> U: 401 Unauthorized
+end
+
+@enduml

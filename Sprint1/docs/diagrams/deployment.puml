@@ -1,0 +1,126 @@
+@startuml deployment
+!theme plain
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam ArrowThickness 1
+skinparam ArrowColor #555
+skinparam defaultTextAlignment center
+skinparam rectangle {
+  BackgroundColor white
+  BorderColor #888
+}
+skinparam component {
+  BackgroundColor white
+  BorderColor #444
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor #444
+}
+skinparam frame {
+  BackgroundColor #F7FBFF
+  BorderColor #2B6CB0
+  FontColor #2B6CB0
+}
+skinparam frame {
+  BackgroundColor #FFFFFF
+  BorderColor #99A
+}
+
+<style>
+  .Database {
+    BackgroundColor lightblue
+    BorderColor blue
+    FontColor black
+  }
+</style>
+
+'==================== LEYENDA ====================
+legend left
+<b>Convenciones</b>
+<color:#444>━►</color>  Comunicación interna
+<color:#999>⋯⋯►</color>  Comunicación externa
+endlegend
+
+'==================== ENTORNO ====================
+frame "K8s" as k8s #aliceblue;line:blue;line.dashed;text:blue {
+
+  '---------- USERS ----------
+  component "users-app-service" as svc_users
+  frame "users-app" as pod_users {
+    component "users_app" as users_app #white
+  }
+
+  component "users-db-service" as svc_users_db #white
+  frame "users-db" as pod_users_db {
+    database "users_db" as users_db <<Database>>
+  }
+  artifact "users-db-volumen" as vol_users_db #white
+
+  ' Conexiones users
+  svc_users --> pod_users
+  users_app --> svc_users_db
+  svc_users_db --> pod_users_db
+  users_db --> vol_users_db
+
+  '---------- POSTS ----------
+  component "posts-app-service" as svc_posts #white
+  frame "posts-app" as pod_posts {
+    component "posts_app" as posts_app #white
+  }
+
+  component "posts-db-service" as svc_posts_db #white
+  frame "posts-db" as pod_posts_db {
+    database "posts_db" as posts_db <<Database>>
+  }
+  artifact "posts-db-volumen" as vol_posts_db #white
+
+  svc_posts --> pod_posts
+  posts_app --> svc_posts_db
+  svc_posts_db --> pod_posts_db
+  posts_db --> vol_posts_db
+
+  '---------- OFFERS ----------
+  component "offers-app-service" as svc_offers #white
+  frame "offers-app" as pod_offers {
+    component "offers_app" as offers_app #white
+  }
+
+  component "offers-db-service" as svc_offers_db #white
+  frame "offers-db" as pod_offers_db {
+    database "offers_db" as offers_db <<Database>>
+  }
+  artifact "offers-db-volumen" as vol_offers_db #white
+
+  svc_offers --> pod_offers
+  offers_app --> svc_offers_db
+  svc_offers_db --> pod_offers_db
+  offers_db --> vol_offers_db
+
+  '---------- ROUTES ----------
+  component "routes-app-service" as svc_routes #white
+  frame "routes-app" as pod_routes {
+    component "routes_app" as routes_app #white
+  }
+
+  component "routes-db-service" as svc_routes_db #white
+  frame "routes-db" as pod_routes_db {
+    database "routes_db" as routes_db <<Database>>
+
+  }
+  artifact "routes-db-volumen" as vol_routes_db #white
+
+  svc_routes --> pod_routes
+  routes_app --> svc_routes_db
+  svc_routes_db --> pod_routes_db
+  routes_db --> vol_routes_db
+}
+
+'==================== CLIENTE ====================
+actor "User" as user
+user ..> svc_users  : HTTP
+user ..> svc_posts  : HTTP
+user ..> svc_offers : HTTP
+user ..> svc_routes : HTTP
+
+@enduml

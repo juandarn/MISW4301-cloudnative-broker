@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multiplication-deployment
+  labels:
+    app: multiplication-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: multiplication-app
+  template:
+    metadata:
+      labels:
+        app: multiplication-app
+    spec:
+      containers:
+        - name: multiplication-app
+          image: python:3.11-slim
+          command: ["/bin/bash"]
+          args:
+            - -c
+            - |
+              pip install fastapi uvicorn requests
+              mkdir -p /app/src
+              cat > /app/src/main.py << 'EOF'
+              import os
+              import requests
+              from fastapi import FastAPI, HTTPException
+              from pydantic import BaseModel
+
+              app = FastAPI()
+
+              class MultiplicationInput(BaseModel):
+                  number1: float
+                  number2: int
+
+              ADDITION_URL = os.getenv("ADDITION_URL", "http://addition-service:80/add")
+
+              @app.get("/multiply/ping", response_model=str)
+              def ping() -> str:
+                  """Health check endpoint."""
+                  return "pong"
+
+              @app.post("/multiply")
+              async def multiply(input: MultiplicationInput):
+                  """Endpoint to multiply two numbers using addition."""
+                  total = 0.0
+                  for _ in range(input.number2):
+                      response = requests.post(
+                          ADDITION_URL,
+                          json={"number1": total, "number2": input.number1}
+                      )
+                      if response.status_code != 200:
+                          raise HTTPException(status_code=503, detail="Failed to call addition service")
+                      total = response.json()["result"]
+                  return {"result": total}
+
+              @app.get("/")
+              def root():
+                  return {"message": "Multiplication service is running!", "status": "ok"}
+              EOF
+              cd /app && PYTHONPATH=/app/src uvicorn src.main:app --host 0.0.0.0 --port 80
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "125m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80
+          env:
+            - name: ADDITION_URL
+              value: "http://addition-service:80/add"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: multiplication-service
+spec:
+  type: ClusterIP
+  selector:
+    app: multiplication-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

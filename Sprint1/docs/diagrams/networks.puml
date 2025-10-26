@@ -1,0 +1,121 @@
+@startuml networks
+!theme plain
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam ArrowThickness 1
+skinparam ArrowColor #555
+skinparam defaultTextAlignment center
+
+'=========================================================
+' INTERNET
+cloud "Internet" as internet
+
+<style>
+  .Database {
+    BackgroundColor lightblue
+    BorderColor blue
+    FontColor black
+  }
+</style>
+
+legend left
+<b>Convenciones</b>
+<color:#444>━►</color>  Comunicación interna
+<color:#999>⋯⋯►</color>  Comunicación externa
+endlegend
+
+'=========================================================
+frame "K8s" #aliceblue;line:blue;line.dashed;text:blue {
+
+() "NodePort :30000" as frame_users
+() "NodePort :30001" as frame_posts
+() "NodePort :30002" as frame_routes
+() "NodePort :30003" as frame_offers
+
+  '----------- USERS -----------
+  frame "users-network" {
+    
+      component "users-app-service" as users_svc <<Port: 80>>
+      frame "users-app" {
+        component users_app as "users_app" <<Port: 5000>>
+
+      
+    }
+    component "users-db-service" as users_db_svc <<Port: 80>>
+    frame "users-db" {
+      component "users_db" as users_db <<Database>>
+    }
+    
+    users_svc  --> users_app
+    users_app --> users_db_svc
+    users_db_svc --> users_db
+  }
+  
+  '----------- POSTS -----------
+  frame "posts-network" {
+    
+      component "posts-app-service" as posts_svc <<Port: 80>>
+      frame "posts-app" {
+        component posts_app as "posts_app" <<Port: 5000>>
+      }
+    
+    component "posts-db-service" as posts_db_svc <<Port: 80>>
+    frame "posts-db" {
+      component "posts_db" as posts_db <<Database>>
+    }
+
+    posts_svc --> posts_app
+    posts_app --> posts_db_svc
+    posts_db_svc --> posts_db
+  }
+  
+  '----------- ROUTES -----------
+  frame "routes-network" {
+    
+      component "routes-app-service" as routes_svc <<Port: 80>>
+      frame "routes-app" {
+        component routes_app as "routes_app" <<Port: 5000>>
+      }
+    
+    component "routes-db-service" as routes_db_svc <<Port: 80>>
+    frame "routes-db" {
+      component "routes_db" as routes_db <<Database>>
+    }
+
+    routes_svc --> routes_app
+    routes_app --> routes_db_svc
+    routes_db_svc --> routes_db
+  }
+  
+  '----------- OFFERS -----------
+  frame "offers-network" {
+   
+      component "offers-app-service" as offers_svc <<Port: 80>>
+      frame "offers-app" {
+        component offers_app as "offers_app" <<Port: 5000>>
+      }
+    
+    component "offers-db-service" as offers_db_svc <<Port: 80>>
+    frame "offers-db" {
+      component "offers_db" as offers_db <<Database>>
+    }
+
+    offers_svc --> offers_app
+    offers_app --> offers_db_svc
+    offers_db_svc --> offers_db
+  }
+}
+
+'=========================================================
+' CONEXIONES EXTERNAS
+internet ...> frame_users
+internet ...> frame_posts
+internet ...> frame_routes
+internet ...> frame_offers
+
+frame_users ---> users_svc
+frame_posts ---> posts_svc
+frame_routes ---> routes_svc
+frame_offers ---> offers_svc
+
+@enduml

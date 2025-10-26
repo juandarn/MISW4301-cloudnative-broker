@@ -1,0 +1,103 @@
+@startuml entities
+'==================== ESTILO GLOBAL ====================
+!theme plain
+skinparam linetype ortho
+skinparam shadowing false
+skinparam ArrowColor #555
+skinparam defaultTextAlignment center
+
+entity "users" as users {
+  * id : String (UUID)
+  --
+  * username : String
+  * email : String
+  phoneNumber : String?
+  dni : String?
+  fullName : String?
+  * password : String
+  * salt : String
+  token : String
+  * status : String <<POR_VERIFICAR|NO_VERIFICADO|VERIFICADO>>
+  expireAt : DateTime (UTC)
+  * createdAt : DateTime (UTC)
+  updatedAt : DateTime (UTC)
+}
+
+entity "routes" as routes {
+  * id : String (UUID)
+  --
+  * flightId : String <<UNIQUE>>
+  * sourceAirportCode : String
+  * sourceCountry : String
+  * destinyAirportCode : String
+  * destinyCountry : String
+  * bagCost : Integer
+  * plannedStartDate : DateTime (UTC)
+  * plannedEndDate : DateTime (UTC)
+  * createdAt : DateTime (UTC)
+  updatedAt : DateTime (UTC)
+}
+
+entity "posts" as posts {
+  * id : String (UUID)
+  --
+  * routeId : String (UUID)
+  * userId : String (UUID)
+  * expireAt : DateTime (UTC)
+  * createdAt : DateTime (UTC)
+}
+
+entity "offers" as offers {
+  * id : String (UUID)
+  --
+  * postId : String (UUID)
+  * userId : String (UUID)
+  * description : String (<=140)
+  * size : String <<LARGE|MEDIUM|SMALL>>
+  * fragile : Boolean
+  * offer : Decimal
+  * createdAt : DateTime (UTC)
+}
+
+entity "scores" as scores {
+  * ofertaId : String (UUID)
+  --
+  * utilidad : Decimal
+  * createdAt : DateTime (UTC)
+  updatedAt : DateTime (UTC)
+}
+
+entity "credit_cards" as credit_cards {
+  * id : String (UUID)
+  --
+  * userId : String (UUID)
+  * token : String? <<TrueNative token>>
+  * ruv : String? <<RUV from TrueNative>>
+  * lastFourDigits : String (4)
+  * issuer : String? <<VISA|MASTERCARD|AMEX>>
+  * status : String <<POR_VERIFICAR|APROBADA|RECHAZADA>>
+  * createdAt : DateTime (UTC)
+  * updatedAt : DateTime (UTC)
+}
+
+entity "user_verification_requests" as user_verification_requests {
+  * id : String (UUID)
+  --
+  * userId : String (UUID)
+  * ruv : String? <<RUV from TrueNative>>
+  * status : String <<POR_VERIFICAR|VERIFICADO|NO_VERIFICADO>>
+  * score : Integer?
+  * requestedAt : DateTime (UTC)
+  * completedAt : DateTime (UTC)?
+}
+
+' Relaciones (crow's foot)
+users  ||--o{ posts  : creates
+users  ||--o{ offers : creates
+users  ||--o{ credit_cards : owns
+users  ||--o{ user_verification_requests : has
+routes ||--o{ posts  : has
+posts  ||--o{ offers : receives
+offers ||--|| scores : has (optional)
+
+@enduml

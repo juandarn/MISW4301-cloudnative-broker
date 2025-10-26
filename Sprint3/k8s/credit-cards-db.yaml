@@ -1,0 +1,52 @@
+###########
+# DATABASE
+############
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-cards-db-deployment
+  labels:
+    app: credit-cards-db
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credit-cards-db
+  template:
+    metadata:
+      labels:
+        app: credit-cards-db
+    spec:
+      containers:
+      - name: credit-cards-db
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "credit_cards_db"         # <-- unificado (antes: routes_db)
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        volumeMounts:
+        - name: credit-cards-db-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: credit-cards-db-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credit-cards-db-service
+  namespace: default
+spec:
+  selector:
+    app: credit-cards-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

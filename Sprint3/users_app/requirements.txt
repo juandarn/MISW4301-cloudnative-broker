@@ -1,0 +1,11 @@
+Flask==3.1.1
+flask-smorest==0.46.1
+Flask-SQLAlchemy==3.1.1
+marshmallow==4.0.0
+marshmallow-enum==1.5.1
+packaging==25.0
+psycopg2-binary==2.9.10
+python-dotenv==1.1.1
+SQLAlchemy==2.0.43
+webargs==8.7.0
+requests==2.32.3  

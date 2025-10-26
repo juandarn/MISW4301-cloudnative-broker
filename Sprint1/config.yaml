@@ -1,0 +1,37 @@
+team:
+   name: Cloudly
+   members:
+      - user: jd.riosn1
+        percentage: 25
+      - user: hvlopez
+        percentage: 25
+      - user: l.carretero
+        percentage: 25
+      - user: f.fernandezr
+        percentage: 25
+board: https://github.com/orgs/uniandes-isis2603/projects/1
+docs: https://uniandes-isis2603.github.io/s202514-proyecto-grupo17/
+users_app:
+  folder: users_app
+  image_name: users-app
+  image_tag: v1.0.0
+  authors:
+    - jd.riosn1
+posts_app:
+  folder: posts_app
+  image_name: posts-app
+  image_tag: v1.0.0
+  authors:
+    - hvlopez
+offers_app:
+  folder: offers_app
+  image_name: offers-app
+  image_tag: v1.0.0
+  authors:
+    - l.carretero
+routes_app:
+  folder: routes_app
+  image_name: routes-app
+  image_tag: v1.0.0
+  authors:
+    - f.fernandezr

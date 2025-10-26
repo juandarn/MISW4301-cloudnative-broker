@@ -1,0 +1,20 @@
+workflow_order:
+  - user
+  - post
+  - routes
+
+services:
+  user:
+    url: "http://users-app-service:80/users/me"
+    ping_url: "http://users-app-service:80/users/ping"
+    timeout: 10
+
+  post:
+    url: "http://posts-app-service:80/posts"
+    ping_url: "http://posts-app-service:80/posts/ping"
+    timeout: 10
+
+  routes:
+    url: "http://routes-app-service:80/routes"
+    ping_url: "http://routes-app-service:80/routes/ping"
+    timeout: 10

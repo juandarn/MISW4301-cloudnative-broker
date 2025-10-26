@@ -1,0 +1,35 @@
+name: Evaluador Pruebas Unitarias
+# Actualice este pipeline si usted decide trabajar en una tecnología diferente a Python.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+jobs:
+  microservices_unit:
+    runs-on: ubuntu-latest
+    name: Unit tests - ${{ matrix.app }}
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [routes_app, posts_app, offers_app, users_app]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        working-directory: ${{ matrix.app }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # Asegura pytest en servicios sin deps de test en requirements
+          pip install pytest pytest-cov
+      - name: Run unit tests
+        working-directory: ${{ matrix.app }}
+        run: |
+          pytest -q

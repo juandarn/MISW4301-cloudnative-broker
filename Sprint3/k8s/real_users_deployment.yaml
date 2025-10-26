@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-app
+  namespace: default
+  labels:
+    app: users-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-app
+  template:
+    metadata:
+      labels:
+        app: users-app
+    spec:
+      containers:
+      - name: users-app
+        image: 533267140008.dkr.ecr.us-east-1.amazonaws.com/users-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@users-db-service:5432/users_db"
+        - name: SECRET_TOKEN
+          value: "supersecreto123"
+        - name: TRUENATIVE_BASE_URL
+          value: "http://service-truenative"
+        - name: USERS_PUBLIC_BASE_URL
+          value: "http://users-app-service"
+        - name: GMAIL_USER
+          valueFrom:
+            secretKeyRef:
+              name: gmail-secret
+              key: user
+        - name: GMAIL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: gmail-secret
+              key: password
+
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-app-service
+  namespace: default
+spec:
+  selector:
+    app: users-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: ClusterIP

@@ -1,0 +1,32 @@
+workflow_order:
+  - user
+  - post
+  - offers
+  - routes
+  - scores
+
+services:
+  user:
+    url: "http://users-app-service:80/users/me"
+    ping_url: "http://users-app-service:80/users/ping"
+    timeout: 5
+
+  post:
+    url: "http://posts-app-service:80/posts/"  # Aquí se le pasa el ID
+    ping_url: "http://posts-app-service:80/posts/ping"
+    timeout: 5
+
+  offers:
+    url: "http://offers-app-service:80/offers?post="  # Aquí se concatena postId
+    ping_url: "http://offers-app-service:80/offers/ping"
+    timeout: 5
+
+  routes:
+    url: "http://routes-app-service:80/routes/"  # Aquí se le pasa el routeId
+    ping_url: "http://routes-app-service:80/routes/ping"
+    timeout: 5
+  
+  scores:
+    url: "http://scores-app-service:80/score/"  # Aquí se le pasa el oferta_id
+    ping_url: "http://scores-app-service:80/score/ping"
+    timeout: 5

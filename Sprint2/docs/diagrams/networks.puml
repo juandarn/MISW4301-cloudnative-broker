@@ -1,0 +1,144 @@
+@startuml networks
+!theme plain
+skinparam shadowing false
+skinparam linetype ortho
+skinparam roundcorner 12
+skinparam ArrowThickness 1
+skinparam ArrowColor #555
+skinparam defaultTextAlignment center
+
+'=========================================================
+' INTERNET
+cloud "Internet" as internet
+
+<style>
+  .Database {
+    BackgroundColor lightblue
+    BorderColor blue
+    FontColor black
+  }
+</style>
+
+legend left
+<b>Convenciones</b>
+<color:#444>━►</color>  Comunicación interna
+<color:#999>⋯⋯►</color>  Comunicación externa
+endlegend
+
+'=========================================================
+frame "K8s" #aliceblue;line:blue;line.dashed;text:blue {
+
+  component "gateway-ingress" as ingress <<Ingress>>
+
+  '----------- AGGREGATOR -----------
+  frame "aggregator-network" {
+    component "aggregator-app-service" as agg_svc <<Port: 80>>
+    frame "aggregator-app" {
+      component aggregator_app as "aggregator_app" <<Port: 5000>>
+    }
+    agg_svc --> aggregator_app
+  }
+
+  '----------- USERS -----------
+  frame "users-network" {
+    component "users-app-service" as users_svc <<Port: 80>>
+    frame "users-app" {
+      component users_app as "users_app" <<Port: 5000>>
+    }
+    component "users-db-service" as users_db_svc <<Port: 5432>>
+    frame "users-db" {
+      component "users_db" as users_db <<Database>>
+    }
+    
+    users_svc --> users_app
+    users_app --> users_db_svc
+    users_db_svc --> users_db
+  }
+    users_db_svc --> users_db
+  
+  
+  '----------- POSTS -----------
+  frame "posts-network" {
+    component "posts-app-service" as posts_svc <<Port: 80>>
+    frame "posts-app" {
+      component posts_app as "posts_app" <<Port: 5000>>
+    }
+    component "posts-db-service" as posts_db_svc <<Port: 5432>>
+    frame "posts-db" {
+      component "posts_db" as posts_db <<Database>>
+    }
+
+    posts_svc --> posts_app
+    posts_app --> posts_db_svc
+    posts_db_svc --> posts_db
+  }
+  
+  '----------- ROUTES -----------
+  frame "routes-network" {
+    component "routes-app-service" as routes_svc <<Port: 80>>
+    frame "routes-app" {
+      component routes_app as "routes_app" <<Port: 5000>>
+    }
+    component "routes-db-service" as routes_db_svc <<Port: 5432>>
+    frame "routes-db" {
+      component "routes_db" as routes_db <<Database>>
+    }
+
+    routes_svc --> routes_app
+    routes_app --> routes_db_svc
+    routes_db_svc --> routes_db
+  }
+  
+  '----------- OFFERS -----------
+  frame "offers-network" {
+    component "offers-app-service" as offers_svc <<Port: 80>>
+    frame "offers-app" {
+      component offers_app as "offers_app" <<Port: 5000>>
+    }
+    component "offers-db-service" as offers_db_svc <<Port: 5432>>
+    frame "offers-db" {
+      component "offers_db" as offers_db <<Database>>
+    }
+
+    offers_svc --> offers_app
+    offers_app --> offers_db_svc
+    offers_db_svc --> offers_db
+  }
+
+  '----------- SCORES -----------
+  frame "scores-network" {
+    component "scores-app-service" as scores_svc <<Port: 80>>
+    frame "scores-app" {
+      component scores_app as "scores_app" <<Port: 5000>>
+    }
+    component "scores-db-service" as scores_db_svc <<Port: 5432>>
+    frame "scores-db" {
+      component "scores_db" as scores_db <<Database>>
+    }
+
+    scores_svc --> scores_app
+    scores_app --> scores_db_svc
+    scores_db_svc --> scores_db
+  }
+}
+
+'=========================================================
+' CONEXIONES EXTERNAS E INGRESS
+internet ...> ingress : "HTTP/HTTPS"
+
+' Rutas del Ingress
+ingress --> agg_svc : "/rf004, /rf005, /"
+ingress --> users_svc : "/users"
+ingress --> posts_svc : "/posts"
+ingress --> routes_svc : "/routes" 
+ingress --> offers_svc : "/offers"
+ingress --> scores_svc : "/score"
+
+' Comunicación entre servicios (agregador llama a otros servicios)
+aggregator_app --> users_svc : "REST API"
+aggregator_app --> posts_svc : "REST API"
+aggregator_app --> routes_svc : "REST API"
+aggregator_app --> offers_svc : "REST API"
+aggregator_app --> scores_svc : "REST API"
+
+@enduml

@@ -1,0 +1,112 @@
+@startuml components
+'==================== ESTILO GLOBAL ====================
+!theme plain
+skinparam shadowing false
+skinparam linetype ortho
+skinparam roundcorner 12
+skinparam ArrowThickness 1
+skinparam ArrowColor #555
+skinparam defaultTextAlignment center
+skinparam package {
+  BackgroundColor white
+  BorderColor #888
+  FontColor #222
+  BorderThickness 1
+}
+skinparam component {
+  BackgroundColor white
+  BorderColor #444
+}
+skinparam database {
+  BackgroundColor white
+  BorderColor #444
+}
+skinparam frame {
+  BackgroundColor #F7FBFF
+  BorderColor #2B6CB0
+  FontColor #2B6CB0
+  BorderThickness 1
+}
+
+frame env #aliceblue;line:blue;line.dashed;text:blue {
+package "Users Microservice" as users_pkg {
+  component "users_app" as users_app
+  database  "users_db"  as users_db
+}
+
+package "Posts Microservice" as posts_pkg {
+  component "posts_app" as posts_app
+  database  "posts_db"  as posts_db
+}
+
+package "Offers Microservice" as offers_pkg {
+  component "offers_app" as offers_app
+  database  "offers_db"  as offers_db
+}
+
+package "Routes Microservice" as routes_pkg {
+  component "routes_app" as routes_app
+  database  "routes_db"  as routes_db
+}
+
+package "Scores Microservice" as scores_pkg {
+  component "scores_app" as scores_app
+  database  "scores_db" as scores_db
+}
+
+package "Credit Cards Microservice (RF-006)" as cards_pkg {
+  component "credit_cards_app" as cards_app
+  database  "credit_cards_db" as cards_db
+  component "cards_poller" as cards_poller
+}
+
+package "TrueNative Integration" as truenative_pkg {
+  component "truenative_service" as truenative <<External Service>>
+}
+
+package "Support Services" as support_pkg {
+  component "producer_service" as producer
+  component "publisher_service" as publisher
+  component "consumer_service" as consumer
+  component "subscriber_service" as subscriber
+}
+
+component "aggregator_service" as aggregator <<Orchestrator>>
+
+}
+
+' Conexiones internas (app -> su DB)
+users_app  --> users_db
+posts_app  --> posts_db
+offers_app --> offers_db
+routes_app --> routes_db
+scores_app --> scores_db
+cards_app  --> cards_db
+
+' Orquestador consulta servicios de dominio
+aggregator --> users_app
+aggregator --> posts_app
+aggregator --> offers_app
+aggregator --> routes_app
+aggregator --> scores_app
+
+' RF-006: Credit Cards integration
+cards_app --> truenative : Verification requests
+cards_poller --> truenative : Status polling
+cards_poller --> cards_db : Update status
+producer --> consumer : Queue messages
+publisher --> subscriber : Event notifications
+
+' RF-007: User verification integration  
+users_app --> truenative : Identity verification
+truenative --> users_app : Webhook callbacks
+
+' Cliente externo
+actor "user" as end_user
+end_user --> aggregator : HTTP/REST (RF003/RF004/RF005)
+end_user --> users_app  : HTTP/REST (endpoints base + RF007)
+end_user --> posts_app  : HTTP/REST (endpoints base)
+end_user --> offers_app : HTTP/REST (endpoints base)
+end_user --> routes_app : HTTP/REST (endpoints base)
+end_user --> cards_app  : HTTP/REST (RF006)
+@enduml

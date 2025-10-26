@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-app-deployment
+  labels:
+    app: users-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-app
+  template:
+    metadata:
+      labels:
+        app: users-app
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox
+        command: ['sh', '-c', 'until nc -z users-db-service 5432; do echo waiting for db; sleep 2; done;']
+      containers:
+      - name: users-app
+        image: users-app:v1.0.0
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@users-db-service:5432/users_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-app-service
+  namespace: default
+spec:
+  selector:
+    app: users-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+      nodePort: 30000
+  type: NodePort

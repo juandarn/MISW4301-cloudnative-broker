@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: addition-deployment
+  labels:
+    app: addition-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: addition-app
+  template:
+    metadata:
+      labels:
+        app: addition-app
+    spec:
+      containers:
+        - name: addition-app
+          image: python:3.11-slim
+          command: ["/bin/bash"]
+          args:
+            - -c
+            - |
+              pip install fastapi uvicorn
+              mkdir -p /app/src
+              cat > /app/src/main.py << 'EOF'
+              from fastapi import FastAPI
+              from pydantic import BaseModel
+
+              app = FastAPI()
+
+              class AdditionInput(BaseModel):
+                  number1: float
+                  number2: float
+
+              @app.get("/add/ping", response_model=str)
+              def ping() -> str:
+                  """Health check endpoint."""
+                  return "pong"
+
+              @app.post("/add")
+              def add_numbers(input: AdditionInput):
+                  """Endpoint to add two numbers."""
+                  result = input.number1 + input.number2
+                  return {"result": result}
+
+              @app.get("/")
+              def root():
+                  return {"message": "Addition service is running!", "status": "ok"}
+              EOF
+              cd /app && PYTHONPATH=/app/src uvicorn src.main:app --host 0.0.0.0 --port 80
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "125m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: addition-service
+spec:
+  type: ClusterIP
+  selector:
+    app: addition-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

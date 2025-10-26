@@ -1,0 +1,73 @@
+@startuml entities
+!theme plain
+skinparam linetype ortho
+
+entity "users" as users {
+  * id : String (UUID)
+  --
+  * username : String
+  * email : String
+  phoneNumber : String?
+  dni : String?
+  fullName : String?
+  * password : String
+  * salt : String
+  token : String
+  * status : String <<POR_VERIFICAR|NO_VERIFICADO|VERIFICADO>>
+  expireAt : DateTime (UTC)
+  * createdAt : DateTime (UTC)
+  updatedAt : DateTime (UTC)
+}
+
+entity "routes" as routes {
+  * id : String (UUID)
+  --
+  * flightId : String <<UNIQUE>>
+  * sourceAirportCode : String
+  * sourceCountry : String
+  * destinyAirportCode : String
+  * destinyCountry : String
+  * bagCost : Integer
+  * plannedStartDate : DateTime (UTC)
+  * plannedEndDate : DateTime (UTC)
+  * createdAt : DateTime (UTC)
+  updatedAt : DateTime (UTC)
+}
+
+entity "posts" as posts {
+  * id : String (UUID)
+  --
+  * routeId : String (UUID)
+  * userId : String (UUID)
+  * expireAt : DateTime (UTC)
+  * createdAt : DateTime (UTC)
+}
+
+entity "offers" as offers {
+  * id : String (UUID)
+  --
+  * postId : String (UUID)
+  * userId : String (UUID)
+  * description : String (<=140)
+  * size : String <<LARGE|MEDIUM|SMALL>>
+  * fragile : Boolean
+  * offer : Decimal
+  * createdAt : DateTime (UTC)
+}
+
+entity "scores" as scores {
+  * ofertaId : String (UUID)
+  --
+  * utilidad : Decimal
+  * createdAt : DateTime (UTC)
+  updatedAt : DateTime (UTC)
+}
+
+' Relaciones (crow's foot)
+users  ||--o{ posts  : creates
+users  ||--o{ offers : creates
+routes ||--o{ posts  : has
+posts  ||--o{ offers : receives
+offers ||--|| scores : has (optional)
+
+@enduml

@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: routes-app
+  namespace: default
+  labels:
+    app: routes-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: routes-app
+  template:
+    metadata:
+      labels:
+        app: routes-app
+    spec:
+      containers:
+      - name: routes-app
+        image: 992382531881.dkr.ecr.us-east-1.amazonaws.com/routes-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@routes-db-service:5432/routes_db"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: routes-app-service
+  namespace: default
+spec:
+  selector:
+    app: routes-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: ClusterIP

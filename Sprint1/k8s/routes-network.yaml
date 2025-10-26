@@ -1,0 +1,31 @@
+###########
+# NETWORK POLICIES
+##############
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: routes-network
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: routes-db
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: routes-app
+    ports:
+    - protocol: TCP
+      port: 5432
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: routes-db
+    ports:
+    - protocol: TCP
+      port: 5432

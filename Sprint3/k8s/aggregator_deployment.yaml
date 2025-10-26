@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aggregator-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aggregator-app
+  template:
+    metadata:
+      labels:
+        app: aggregator-app
+    spec:
+      containers:
+      - name: aggregator-app
+        image: 992382531881.dkr.ecr.us-east-1.amazonaws.com/aggregator-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: FLASK_APP
+          value: "src/app.py"
+        - name: FLASK_RUN_HOST
+          value: "0.0.0.0"
+        - name: FLASK_RUN_PORT
+          value: "5000"
+        livenessProbe:
+          httpGet:
+            path: /rf005/ping
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /rf005/ping
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aggregator-app-service
+  namespace: default
+spec:
+  selector:
+    app: aggregator-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5000
+  type: ClusterIP

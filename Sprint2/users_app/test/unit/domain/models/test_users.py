@@ -1,0 +1,188 @@
+def test_user_ping(client):
+    response = client.get("/users/ping")
+    assert response.status_code == 200
+    assert response.json == {"message": "Pong"}
+
+def test_user_count_empty(client):
+    response = client.get("/users/count")
+    assert response.status_code == 200
+    assert response.json["count"] == 0
+
+def test_create_user_success(client):
+    data = {
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "123456",
+        "dni": "12345678",
+        "fullName": "Test User",
+        "phoneNumber": "123456789"
+    }
+    response = client.post("/users", json=data)
+    assert response.status_code == 201
+    assert response.json["username"] == "testuser"
+    assert "createdAt" in response.json
+    assert "id" in response.json
+
+def test_create_user_missing_field(client):
+    data = {
+        "username": "user2",
+        "password": "123456",
+        "dni": "123",
+        "fullName": "User Two",
+        "phoneNumber": "123456"
+    }
+    response = client.post("/users", json=data)
+    assert response.status_code == 400 or response.status_code == 422 
+
+def test_create_user_duplicate_username(client):
+    data = {
+        "username": "testuser",
+        "email": "a@example.com",
+        "password": "123456",
+        "dni": "1111",
+        "fullName": "A User",
+        "phoneNumber": "1111"
+    }
+    client.post("/users", json=data)
+    data2 = {
+        "username": "testuser",
+        "email": "b@example.com",
+        "password": "123456",
+        "dni": "2222",
+        "fullName": "B User",
+        "phoneNumber": "2222"
+    }
+    response = client.post("/users", json=data2)
+    assert response.status_code == 412
+    assert "Username already exists" in response.json["message"]
+
+def test_create_user_duplicate_email(client):
+    data1 = {
+        "username": "user1",
+        "email": "dup@example.com",
+        "password": "123",
+        "dni": "1111",
+        "fullName": "User 1",
+        "phoneNumber": "1111"
+    }
+    client.post("/users", json=data1)
+    data2 = {
+        "username": "user2",
+        "email": "dup@example.com",
+        "password": "123",
+        "dni": "2222",
+        "fullName": "User 2",
+        "phoneNumber": "2222"
+    }
+    response = client.post("/users", json=data2)
+    assert response.status_code == 412
+    assert "Email already exists" in response.json["message"]
+
+def test_auth_user_success(client):
+    data = {
+        "username": "authuser",
+        "email": "auth@example.com",
+        "password": "pass123",
+        "dni": "123",
+        "fullName": "Auth User",
+        "phoneNumber": "123456"
+    }
+    client.post("/users", json=data)
+    auth_data = {"username": "authuser", "password": "pass123"}
+    response = client.post("/users/auth", json=auth_data)
+    assert response.status_code == 200
+    assert "token" in response.json
+    
+
+def test_auth_user_invalid_password(client):
+    data = {
+        "username": "authuser2",
+        "email": "auth2@example.com",
+        "password": "pass123",
+        "dni": "1234",
+        "fullName": "Auth User2",
+        "phoneNumber": "123456"
+    }
+    client.post("/users", json=data)
+    auth_data = {"username": "authuser2", "password": "wrongpass"}
+    response = client.post("/users/auth", json=auth_data)
+    assert response.status_code == 404
+
+def test_user_me_success(client):
+    data = {
+        "username": "meuser",
+        "email": "me@example.com",
+        "password": "passme",
+        "dni": "5678",
+        "fullName": "Me User",
+        "phoneNumber": "5678"
+    }
+    client.post("/users", json=data)
+    auth_data = {"username": "meuser", "password": "passme"}
+    auth_response = client.post("/users/auth", json=auth_data)
+    token = auth_response.json["token"]
+    response = client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+
+def test_user_me_missing_token(client):
+    response = client.get("/users/me")
+    assert response.status_code == 403
+
+def test_user_me_invalid_token(client):
+    response = client.get("/users/me", headers={"Authorization": "Bearer invalid"})
+    assert response.status_code == 401
+
+def test_user_patch_success(client):
+    data = {
+        "username": "patchuser",
+        "email": "patch@example.com",
+        "password": "passpatch",
+        "dni": "0000",
+        "fullName": "Patch User",
+        "phoneNumber": "0000"
+    }
+    create_response = client.post("/users", json=data)
+    user_id = create_response.json["id"]
+    patch_data = {
+        "fullName": "New Name",
+        "phoneNumber": "9999",
+        "dni": "0000",
+        "status": "active"
+    }
+    response = client.patch(f"/users/{user_id}", json=patch_data)
+    assert response.status_code == 200
+    assert "actualizado" in response.json["msg"]
+
+def test_user_patch_not_found(client):
+    patch_data = {
+        "fullName": "New Name",
+        "phoneNumber": "9999",
+        "dni": "0000",
+        "status": "active"
+    }
+    response = client.patch("/users/invalidid", json=patch_data)
+    assert response.status_code == 404
+
+def test_user_count(client):
+    client.post("/users", json={
+        "username": "count1", "email": "c1@example.com", "password": "123",
+        "dni":"1","fullName":"Count1","phoneNumber":"1111"
+    })
+    client.post("/users", json={
+        "username": "count2", "email": "c2@example.com", "password": "123",
+        "dni":"2","fullName":"Count2","phoneNumber":"2222"
+    })
+    response = client.get("/users/count")
+    assert response.status_code == 200
+    assert response.json["count"] >= 2
+
+def test_user_reset(client):
+    client.post("/users", json={
+        "username": "resetuser", "email": "reset@example.com", "password": "123",
+        "dni":"3","fullName":"Reset User","phoneNumber":"3333"
+    })
+    response = client.post("/users/reset")
+    assert response.status_code == 200
+    assert "eliminados" in response.json["msg"].lower()
+    count_response = client.get("/users/count")
+    assert count_response.json["count"] == 0

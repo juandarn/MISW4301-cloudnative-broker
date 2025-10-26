@@ -1,0 +1,41 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam ArrowColor #333
+skinparam ActorStyle awesome
+
+actor Usuario as U
+participant "Aggregator" as A
+participant "Users Service" as US
+participant "Posts Service" as PS
+participant "Routes Service" as RS
+participant "Offers Service" as OFS
+participant "Scores Service" as SS
+
+== Crear Oferta RF004 ==
+U -> A: POST /rf004/posts/{postId}/offers
+activate A
+A -> A: ping user, post, offers
+A -> US: GET /users (token)
+US --> A: {id}
+A -> PS: GET /posts/{postId}
+PS --> A: Post (expireAt, userId, routeId, bagValue?)
+A -> A: Validar no dueño\nValidar no expirada
+alt bagValue ausente
+  A -> RS: GET /routes/{routeId}
+  RS --> A: {bagCost}
+end
+A -> OFS: POST /offers (datos oferta)
+OFS --> A: {id, createdAt}
+A -> SS: POST /scores (oferta_id, utilidad)
+A --> U: 201 {data:{id, userId, postId, createdAt}}
+deactivate A
+
+== Cálculo Utilidad ==
+note over A
+occupancy = SIZE(L=1,M=0.5,S=0.25)
+score = offer - (occupancy * bagCost)
+Registro score best-effort
+Errores externos => 503
+end note
+@enduml

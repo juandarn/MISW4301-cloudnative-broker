@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: offers-db-deployment
+  labels:
+    app: offers-db
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: offers-db
+  template:
+    metadata:
+      labels:
+        app: offers-db
+    spec:
+      containers:
+      - name: offers-db
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: "offers_db"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "password"
+        volumeMounts:
+        - name: offers-db-storage
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: offers-db-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: offers-db-service
+  namespace: default
+spec:
+  selector:
+    app: offers-db
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP

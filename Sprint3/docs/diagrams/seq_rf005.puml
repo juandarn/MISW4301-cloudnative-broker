@@ -1,0 +1,40 @@
+@startuml
+skinparam monochrome true
+skinparam shadowing false
+skinparam ArrowColor #333
+skinparam ActorStyle awesome
+
+actor Usuario as U
+participant "Aggregator" as A
+participant "Users Service" as US
+participant "Posts Service" as PS
+participant "Offers Service" as OFS
+participant "Scores Service" as SS
+participant "Routes Service" as RS
+
+== Consultar Publicación RF005 ==
+U -> A: GET /rf005/posts/{postId}
+activate A
+A -> A: ping user, post, offers
+A -> US: GET /users (token)
+US --> A: {id}
+A -> PS: GET /posts/{postId}
+PS --> A: {userId, routeId, expireAt}
+A -> A: Validar ownership
+A -> OFS: GET /offers?post={postId}
+OFS --> A: [offers]
+loop por cada oferta
+  A -> SS: GET /scores/{oferta_id}
+  SS --> A: {utilidad} || error
+end
+A -> RS: GET /routes/{routeId}
+RS --> A: {flightId, bagCost, plannedStartDate, plannedEndDate}
+A -> A: Ordenar ofertas por score desc (null=0)
+A --> U: 200 {data:{post, route, offers[]}}
+deactivate A
+
+note over A
+Resiliencia: si falla score => score=null
+Orden estable con score null al final
+end note
+@enduml

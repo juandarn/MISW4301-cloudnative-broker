@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: producer-deployment
+  labels:
+    app: producer-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: producer-app
+  template:
+    metadata:
+      labels:
+        app: producer-app
+    spec:
+      containers:
+        - name: producer-app
+          image: 992382531881.dkr.ecr.us-east-1.amazonaws.com/producer-app:latest
+          imagePullPolicy: Always
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "125m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          ports:
+            - containerPort: 80
+          env:
+            - name: SQS_QUEUE_URL
+              value: "https://sqs.us-east-1.amazonaws.com/992382531881/producer-consumer-queue"
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: producer-service
+spec:
+  type: ClusterIP
+  selector:
+    app: producer-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

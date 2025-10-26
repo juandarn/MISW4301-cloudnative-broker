@@ -1,0 +1,47 @@
+###########
+# APPLICATION
+##############
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: routes-app-deployment
+  labels:
+    app: routes-app
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: routes-app
+  template:
+    metadata:
+      labels:
+        app: routes-app
+    spec:
+      initContainers:
+      - name: wait-for-db
+        image: busybox
+        command: ['sh', '-c', 'until nc -z routes-db-service 5432; do echo waiting for db; sleep 2; done;']
+      containers:
+      - name: routes-app
+        image: routes-app:v1.0.0
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URI
+          value: "postgresql://postgres:password@routes-db-service:5432/routes_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: routes-app-service
+  namespace: default
+spec:
+  selector:
+    app: routes-app
+  ports:
+    - protocol: TCP
+      port: 80 #service
+      targetPort: 5000 #contenedor
+      nodePort: 30002
+  type: NodePort
